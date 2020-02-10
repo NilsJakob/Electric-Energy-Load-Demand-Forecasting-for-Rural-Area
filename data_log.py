@@ -115,5 +115,50 @@ show_plots(Training, '2018-06', '2018-08')
 # In[ ]:
 
 
+def engineer_features(dataframe, columns, time_lags=24, drop_nan_rows=True):
+    data = dataframe[columns].copy()
+    # Features engineering
+    for col in data.columns:
+        for i in range(1, time_lags+1):
+            # Shift data by lag of 1 to time_lags (default: 24) hours
+            data[col+'_{:d}h'.format(i)] = data[col].shift(periods=i)  # time-lag
+        data[col+'_diff'] = data[col].diff()  # first-difference
+        data[col+'_week'] = data[col].shift(periods=24*7)  # previous week
+    # Hour-of-day indicators with cyclical transform
+    dayhour_ind = data.index.hour
+    data['hr_sin'] = np.sin(dayhour_ind*(2.*np.pi/24))
+    data['hr_cos'] = np.cos(dayhour_ind*(2.*np.pi/24))
+    # Day-of-week indicators with cyclical transform
+    weekday_ind = data.index.weekday
+    data['week_sin'] = np.sin(weekday_ind*(2.*np.pi/7))
+    data['week_cos'] = np.cos(weekday_ind*(2.*np.pi/7))
+    # Weekend indicator
+    data['weekend'] = np.asarray([0 if ind <= 4 else 1 for ind in weekday_ind])
+    # Month indicators with cyclical transform
+    month_ind = data.index.month
+    data['mnth_sin'] = np.sin((month_ind-1)*(2.*np.pi/12))
+    data['mnth_cos'] = np.cos((month_ind-1)*(2.*np.pi/12))
+    if drop_nan_rows:
+        # Drop rows with NaN values
+        data.dropna(inplace=True)
+    return data
+
+
+# In[ ]:
+
+
+data_features = engineer_features(Training, columns=['Load', 'Temperature'])
+data_features.head()
+
+
+# In[ ]:
+
+
+print(data_features.columns)
+
+
+# In[ ]:
+
+
 
 
