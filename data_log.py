@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import pandas as pd
@@ -9,23 +9,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# In[ ]:
+
+
 #function to read load data and weather data:
 def data_reader(file_name):
     data = pd.read_excel(file_name, parse_dates=True, index_col='Time', usecols=range(2))
     return data
 
-load_data = data_reader('C:/Users/nilsjj12/Documents/Present/Data/Index_Bjønntjønn_2014_2018.xlsx')
-
 def weather_reader(file_name):
     weather = pd.read_excel(file_name, parse_dates=True, index_col='Time measured')
     return weather
-
-weather_data = weather_reader('C:/Users/nilsjj12/Documents/Present/Data/bo_temp_2014_2018.xlsx')
 
 #function for concatenating load data and weather data for training:
 def data(file_name_load, file_name_weather):
     train_data = pd.concat([file_name_load, file_name_weather], axis=1)
     return train_data
+
+
+# In[ ]:
+
+
+load_data = data_reader('Index_Bjønntjønn_2014_2018.xlsx')
+weather_data = weather_reader('bo_temp_2014_2018.xlsx')
 
 weather_data = weather_data.interpolate()
 Training = data(load_data, weather_data)
@@ -41,13 +47,16 @@ Training['weekday'] = s.dt.dayofweek
 #Training['weekday'] = Training['weekday'].astype(int)
 Training['working_days'] = Training['weekday'].replace({6: 1, 5: 1, 4: 1, 3: 0, 2: 0, 1: 0})
 
+
+# In[ ]:
+
+
 #function to create sliding window based on time shifts:
 def time_shifts_func(name, data_hrs, time_shift, regr=False):
     # name = 'DK1'
     # time_shift = 24
     if not regr:
         data_hrs[name + '_t' + '+' + str(time_shift)] = data_hrs[name].shift(time_shift)
-        
     else:
         data_hrs['auto_' + name + '_t' + '+' + str(time_shift)] = (data_hrs[name].shift(time_shift)-data_hrs[name].shift(time_shift+1))
     #print(data_hrs[name].shift(time_shift))
@@ -65,5 +74,46 @@ time_shifts_func('Temperature', Training, 24)
 
 #Training=Training.dropna()
 
-Training.head()
+
+# In[ ]:
+
+
+Training.head(10)
+
+
+# In[ ]:
+
+
+def show_plots(data, time_start, time_end=None):
+    fig, ax = plt.subplots(figsize=(8,6))
+    ax2 = ax.twinx()
+    load = data['Load'].loc[time_start:time_end].plot(c='seagreen', label='Load', ax=ax)
+    temp = data['Temperature'].loc[time_start:time_end].plot(c='darkorange', label='Temperature', ax=ax2)
+    ax.legend(loc='upper left')
+    ax2.legend(loc='upper right')
+    ax.set_ylabel('Load', fontsize=12, fontweight='bold', color='seagreen')
+    ax2.set_ylabel('Temperature', fontsize=12, fontweight='bold', color='darkorange')
+    fig.tight_layout()
+    plt.show()
+    return
+
+
+# In[ ]:
+
+
+# Time-series for 2018
+show_plots(Training, '2018')
+
+
+# In[ ]:
+
+
+# Time-series for June to August 2018
+show_plots(Training, '2018-06', '2018-08')
+
+
+# In[ ]:
+
+
+
 
