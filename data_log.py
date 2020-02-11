@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import pandas as pd
@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# In[ ]:
+# In[2]:
 
 
 #function to read load data and weather data:
@@ -27,7 +27,7 @@ def data(file_name_load, file_name_weather):
     return train_data
 
 
-# In[ ]:
+# In[3]:
 
 
 load_data = data_reader('Index_Bjønntjønn_2014_2018.xlsx')
@@ -48,7 +48,7 @@ Training['weekday'] = s.dt.dayofweek
 Training['working_days'] = Training['weekday'].replace({6: 1, 5: 1, 4: 1, 3: 0, 2: 0, 1: 0})
 
 
-# In[ ]:
+# In[4]:
 
 
 #function to create sliding window based on time shifts:
@@ -75,13 +75,13 @@ time_shifts_func('Temperature', Training, 24)
 #Training=Training.dropna()
 
 
-# In[ ]:
+# In[5]:
 
 
 Training.head(10)
 
 
-# In[ ]:
+# In[6]:
 
 
 def show_plots(data, time_start, time_end=None):
@@ -98,21 +98,21 @@ def show_plots(data, time_start, time_end=None):
     return
 
 
-# In[ ]:
+# In[7]:
 
 
 # Time-series for 2018
 show_plots(Training, '2018')
 
 
-# In[ ]:
+# In[8]:
 
 
 # Time-series for June to August 2018
 show_plots(Training, '2018-06', '2018-08')
 
 
-# In[ ]:
+# In[9]:
 
 
 def engineer_features(dataframe, columns, time_lags=24, drop_nan_rows=True):
@@ -144,21 +144,81 @@ def engineer_features(dataframe, columns, time_lags=24, drop_nan_rows=True):
     return data
 
 
-# In[ ]:
+# In[10]:
 
 
 data_features = engineer_features(Training, columns=['Load', 'Temperature'])
 data_features.head()
 
 
-# In[ ]:
+# In[11]:
 
 
 print(data_features.columns)
 
 
-# In[ ]:
+# In[12]:
 
 
-
+#Local holidays including prior knowledge about recreation days
+#easter 2014
+Training['working_days'].loc['2014-04-14':'2014-04-21']=1
+#1st of may 2014
+Training['working_days'].loc['2014-05-01']=1
+#Pentecost 2014
+Training['working_days'].loc['2014-06-07':'2014-06-10']=1
+#X-mas 2014
+Training['working_days'].loc['2014-12-21':'2014-12-31']=1
+#1st of January 2015
+Training['working_days'].loc['2015-01-01']
+#easter 2015 
+Training['working_days'].loc['2015-03-30':'2015-04-06']=1
+#1st of may 2015 is on a friday, already coded 
+#Training['working_days'].loc['2015-05-01']=1
+#Ascension Day 2015 2015-05-14
+Training['working_days'].loc['2015-05-14']=1
+#Pentecost 2015
+Training['working_days'].loc['2014-05-24':'2014-05-25']=1
+#X-mas 2015
+Training['working_days'].loc['2015-12-23':'2015-12-31']=1
+#1st of January 2016
+Training['working_days'].loc['2016-01-01']=1
+#easter 2016
+Training['working_days'].loc['2016-03-21':'2016-03-28']=1
+#1st of may 2016 is on a sunday, already coded 
+#Training['working_days'].loc['2015-05-01']=1
+#Ascension Day 2016 2015-05-16
+Training['working_days'].loc['2016-05-05']=1
+#Pentecost 2016
+Training['working_days'].loc['2016-05-16':'2016-05-17']=1
+#X-mas 2016
+Training['working_days'].loc['2016-12-26':'2016-12-31']=1
+#1st of January 2017
+Training['working_days'].loc['2017-01-01']
+#easter 2017
+Training['working_days'].loc['2017-04-10':'2017-04-17']=1
+#1st of may 2017 is on a monday:
+Training['working_days'].loc['2017-05-01']=1
+#17th of may 2017 is on a wednesday:
+Training['working_days'].loc['2017-05-17']=1
+#Ascension Day 2017 2017-05-25
+Training['working_days'].loc['2017-05-25']=1
+#Pentecost 2017
+Training['working_days'].loc['2017-06-05']=1
+#X-mas 2017
+Training['working_days'].loc['2017-12-25':'2017-12-31']=1
+#1st of January 2018
+Training['working_days'].loc['2018-01-01']
+#easter 2018
+Training['working_days'].loc['2018-03-26':'2018-04-02']=1
+#1st of may 2018 is on a tuesday:
+Training['working_days'].loc['2018-05-01']=1
+#Ascension Day 2018 2018-05-10
+Training['working_days'].loc['2017-05-10']=1
+#17th of may 2018 is on a thursday:
+Training['working_days'].loc['2017-05-17']=1
+#Pentecost 2018
+Training['working_days'].loc['2018-05-21']=1
+#X-mas 2018
+Training['working_days'].loc['2018-12-24':'2018-12-31']=1
 
