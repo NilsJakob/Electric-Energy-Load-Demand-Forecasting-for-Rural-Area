@@ -8,6 +8,7 @@
 
 import pandas as pd
 import numpy as np
+import datetime as dt
 import matplotlib.pyplot as plt
 
 
@@ -139,8 +140,13 @@ holiday_dates = {
 
 
 def engineer_features(dataframe, holiday_dates, columns, time_lags=24, 
-                      drop_nan_rows=True):
+                      steps_ahead=1, drop_nan_rows=True):
     """Engineering features
+    
+    Load data features column names with underscore (i.e. Load_1h, Load_2h, etc.) 
+    represent time-lags (t-1, t-2, ...), while those with plus sign (i.e. Load+1h, 
+    Load+2h, etc.) represent future time-steps (t+1, t+2, ...); column with name
+    Load+0h represents current load at time instant t. 
     
     Parameters
     ----------
@@ -153,13 +159,16 @@ def engineer_features(dataframe, holiday_dates, columns, time_lags=24,
         features engineering (i.e. time-lags)
     time_lags: int
         number of time lags for use with feature engineering
+    steps_ahead: int
+        number of steps ahead for multi-step forecasting (steps_ahead=1
+        means single-step ahead forecasting)
     drop_nan_rows: bool
         True/False indicator to drop rows with NaN values
-    
+
     Returns
     -------
     dataframe: pandas dataframe 
-        dataframe augmented with additional features 
+        dataframe augmented with additional features
     """
     
     # Make a copy of the original dataframe
@@ -200,7 +209,17 @@ def engineer_features(dataframe, holiday_dates, columns, time_lags=24,
         else:
             # Date range
             data.loc[date[0]:date[1], 'holidays'] = 1
-
+    
+    # Forecast horizont
+    if steps_ahead == 1:
+        # Single-step forecasting
+        data['Load+0h'] = data['Load'].values
+    else:
+        # Multi-step forecasting
+        for i in range(steps_ahead):
+            data['Load'+'+{:d}h'.format(i)] = data['Load'].shift(-i)
+    del data['Load']
+    
     if drop_nan_rows:
         # Drop rows with NaN values
         data.dropna(inplace=True)
@@ -211,14 +230,92 @@ def engineer_features(dataframe, holiday_dates, columns, time_lags=24,
 # In[ ]:
 
 
-data_features = engineer_features(dataframe, holiday_dates, columns=['Load', 'Temperature'])
+# 24-hours ahead forecasting (steps_ahead=24)
+data_features = engineer_features(dataframe, holiday_dates, columns=['Load', 'Temperature'], steps_ahead=24)
 data_features.head()
 
 
 # In[ ]:
 
 
-print(data_features.columns)
+print(data_features.columns.values)
+
+
+# In[ ]:
+
+
+def train_test_split(data, start_date, window_days=100, train_percent=80.,
+                     return_arrays=False):
+    """Train and test data set split
+    
+    Parameters
+    ----------
+    data: pandas dataframe
+        dataframe augmented with additional features
+    start_date: string
+        starting date of the time-series 
+    window_size_days: int
+        size of the data window in days
+    train_percent: float
+        percentage of the data window size to use for creating the 
+        training data set (the rest is used for testing)
+    return_arrays: bool
+        True/False indicator which defines the type of output; if 
+        True function returns numpy arrays; if False it returns
+        pandas dataframes
+    
+    Returns
+    -------
+    X_train: dataframe or array
+        training data 2D array of input features
+    y_train: dataframe or array
+        training data array of output values
+    X_test: dataframe or array
+        testing data 2D array of input features
+    y_test: dataframe or array
+        testing data array of output values        
+    """
+    # Split dataframe into X, y
+    columns = data.columns.values
+    outputs = [col_name for col_name in columns if 'Load+' in col_name]
+    inputs = [col_name for col_name in columns if col_name not in outputs]
+    # inputs (features)
+    X = data[inputs]
+    # outputs
+    y = data[outputs]
+    
+    # Training period
+    train_percent = train_percent/100.
+    st = pd.to_datetime(start_date)  # start date
+    et = st + dt.timedelta(days=int(train_percent*window_days))  # end date
+    X_train = X.loc[st:et]
+    y_train = y.loc[st:et]
+    
+    # Testing period
+    sv = et 
+    ev = sv + dt.timedelta(days=int((1-train_percent)*window_days)+1)
+    X_test = X.loc[sv:ev]
+    y_test = y.loc[sv:ev]
+    
+    if return_arrays:
+        # Returning numpy arrays
+        return X_train.values, y_train.values, X_test.values, y_test.values
+    else:
+        # Returning pandas dataframes
+        return X_train, y_train, X_test, y_test
+
+
+# In[ ]:
+
+
+X_train, y_train, X_test, y_test = train_test_split(data_features, start_date='2014-01-09', window_days=90)
+
+
+# In[ ]:
+
+
+print(X_train.shape, y_train.shape)
+print(X_test.shape, y_test.shape)
 
 
 # In[ ]:
