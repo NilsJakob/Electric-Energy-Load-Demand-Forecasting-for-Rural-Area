@@ -10,6 +10,20 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gs
+
+
+# In[ ]:
+
+
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+
+# In[ ]:
+
+
+import tensorflow as tf
+from tensorflow import keras
 
 
 # In[ ]:
@@ -230,31 +244,17 @@ def engineer_features(dataframe, holiday_dates, columns, time_lags=24,
 # In[ ]:
 
 
-# 24-hours ahead forecasting (steps_ahead=24)
-data_features = engineer_features(dataframe, holiday_dates, columns=['Load', 'Temperature'], steps_ahead=24)
-data_features.head()
-
-
-# In[ ]:
-
-
-print(data_features.columns.values)
-
-
-# In[ ]:
-
-
-def train_test_split(data, start_date, window_days=100, train_percent=80.,
+def train_test_split(dataframe, start_date, window_days=100, train_percent=80.,
                      return_arrays=False):
     """Train and test data set split
     
     Parameters
     ----------
-    data: pandas dataframe
+    dataframe: pandas dataframe
         dataframe augmented with additional features
     start_date: string
         starting date of the time-series 
-    window_size_days: int
+    window_days: int
         size of the data window in days
     train_percent: float
         percentage of the data window size to use for creating the 
@@ -271,10 +271,15 @@ def train_test_split(data, start_date, window_days=100, train_percent=80.,
     y_train: dataframe or array
         training data array of output values
     X_test: dataframe or array
-        testing data 2D array of input features
+        testing/validation data 2D array of input features
     y_test: dataframe or array
-        testing data array of output values        
+        testing/validation data array of output values
     """
+    data = dataframe.copy()
+    if window_days*24 > data.values.shape[0]:
+        raise ValueError('Variable window_days has too large value: {}*24h = {} > {},             which is more than there is data!'.format(window_days, window_days*24, 
+                                                      data.values.shape[0]))
+    
     # Split dataframe into X, y
     columns = data.columns.values
     outputs = [col_name for col_name in columns if 'Load+' in col_name]
@@ -291,12 +296,12 @@ def train_test_split(data, start_date, window_days=100, train_percent=80.,
     X_train = X.loc[st:et]
     y_train = y.loc[st:et]
     
-    # Testing period
+    # Testing / Validation period
     sv = et 
     ev = sv + dt.timedelta(days=int((1-train_percent)*window_days)+1)
     X_test = X.loc[sv:ev]
     y_test = y.loc[sv:ev]
-    
+        
     if return_arrays:
         # Returning numpy arrays
         return X_train.values, y_train.values, X_test.values, y_test.values
@@ -308,7 +313,21 @@ def train_test_split(data, start_date, window_days=100, train_percent=80.,
 # In[ ]:
 
 
-X_train, y_train, X_test, y_test = train_test_split(data_features, start_date='2014-01-09', window_days=90)
+STEPS_AHEAD = 24
+# 24-hours ahead forecasting (steps_ahead=24)
+data_features = engineer_features(dataframe, holiday_dates, 
+                                  columns=['Load', 'Temperature'], 
+                                  steps_ahead=STEPS_AHEAD)
+
+
+# In[ ]:
+
+
+START_DATE = '2014-01-09'
+WINDOW_SIZE_DAYS = 400
+# Split dataset into training and test/validation sets
+X_train, y_train, X_test, y_test = train_test_split(data_features, start_date=START_DATE, 
+                                                    window_days=WINDOW_SIZE_DAYS)
 
 
 # In[ ]:
@@ -316,6 +335,155 @@ X_train, y_train, X_test, y_test = train_test_split(data_features, start_date='2
 
 print(X_train.shape, y_train.shape)
 print(X_test.shape, y_test.shape)
+
+
+# In[ ]:
+
+
+# Scale and transform input data
+scaler = StandardScaler()
+X_train_sc = scaler.fit_transform(X_train)
+X_test_sc = scaler.transform(X_test)
+
+
+# In[ ]:
+
+
+BATCH_SIZE = 256
+EPOCHS = 400
+WAIT = 50  # patience
+LR = 1e-3  # learning rate
+# Feed-forward and fixed funnel-shaped deep ANN
+# tf.keras functional API
+input_layer = keras.layers.Input(shape=X_train_.shape[1:])
+x = keras.layers.Dense(units=1024, activation='relu')(input_layer)
+x = keras.layers.Dropout(0.2)(x)  # regularization
+x = keras.layers.Dense(units=512, activation='relu')(x)
+x = keras.layers.Dense(units=512, activation='relu')(x)
+x = keras.layers.Dropout(0.1)(x)  # regularization
+x = keras.layers.Dense(units=256, activation='relu')(x)
+output_layer = keras.layers.Dense(STEPS_AHEAD)(x)
+model = keras.models.Model(inputs=input_layer, outputs=output_layer)
+adam = keras.optimizers.Adam(learning_rate=LR, decay=LR/EPOCHS)
+model.compile(loss='mae', optimizer=adam, metrics=['mae', 'mape'])
+early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.1, 
+                                           patience=WAIT, verbose=1,
+                                           restore_best_weights=True)
+history = model.fit(X_train_sc, y_train.values, batch_size=BATCH_SIZE, epochs=EPOCHS, 
+                    validation_data=(X_test_sc, y_test.values),
+                    callbacks=[early_stop], shuffle=True, verbose=0,
+                    use_multiprocessing=True)
+
+
+# In[ ]:
+
+
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+print('MAE val_loss at final epoch is {:.2f}, while min. val_loss is {:.2f}.'
+      .format(val_loss[-1], min(val_loss)))
+plt.plot(loss, label='train')
+plt.plot(val_loss, label='validation')
+plt.legend(loc='best')
+plt.xlabel('Epochs')
+plt.ylabel('MAE loss value')
+plt.show()
+
+
+# In[ ]:
+
+
+def prepare_test_data(dataframe, start_date, window_days, test_size=1):
+    """ Prepare test data
+    
+    Arguments
+    ---------
+    dataframe: pandas dataframe
+        original dataframe with features
+    start_date: string
+        starting date for the time-series previously used
+        in creating the train and test/validation data sets
+    window_days: int
+        size of the data window in days previously used
+        in creating the train and test/validation data sets
+    test_size: int
+        number of time-steps (hours) for walk-forward testing
+        
+    Returns
+    -------
+    X_new: numpy array
+        walk-forward testing data set as numpy array
+    """
+    data = dataframe.copy()
+    date_test_start = pd.to_datetime(start_date) + dt.timedelta(days=window_days)
+    date_test_end = date_test_start + dt.timedelta(hours=test_size)
+    
+    columns = data.columns.values
+    outputs = [col_name for col_name in columns if 'Load+' in col_name]
+    inputs = [col_name for col_name in columns if col_name not in outputs]
+    
+    if test_size == 1:
+        X_new = data[inputs].loc[date_test_start].values.reshape(1,-1)
+    else:
+        X_new = data[inputs].loc[date_test_start:date_test_end].values[:-1]
+
+    return X_new
+
+
+# In[ ]:
+
+
+TEST_SIZE = 12  # walk-forward for 12 hours
+X_new = prepare_test_data(data_features, START_DATE, WINDOW_SIZE_DAYS, TEST_SIZE)
+
+
+# In[ ]:
+
+
+X_new_sc = scaler.transform(X_new)
+
+
+# In[ ]:
+
+
+# Predict on new values
+y_pred = model.predict(X_new_sc)
+
+
+# In[ ]:
+
+
+def mean_absolute_percentage_error(y_true, y_pred): 
+    return np.mean(np.abs((y_true - y_pred)/y_true))*100.
+
+
+# In[ ]:
+
+
+# Plotting multi-step ahead predictions using the walk-forward method
+if TEST_SIZE == 1: 
+    raise ValueError('TEST_SIZE: Need a multi-step ahead predictions!')
+date_start = pd.to_datetime(START_DATE) + dt.timedelta(days=WINDOW_SIZE_DAYS)
+for i in range(TEST_SIZE):
+    date_end = date_start + dt.timedelta(hours=23)
+    y_true = data_features['Load+0h'].loc[date_start:date_end]
+    y_values = pd.DataFrame(y_true)
+    y_values = y_values.rename(columns={'Load+0h':'Actual'})
+    y_values['Predicted'] = y_pred[i,:]
+    
+    # Absolute percentage error
+    y_values['APE'] = np.abs((y_values['Actual'] - y_values['Predicted'])/y_values['Actual'])*100.
+    # Mean absolute percentage error
+    mape = mean_absolute_percentage_error(y_values['Actual'].values, y_values['Predicted'].values)
+    print('MAPE = {:.2f} (%)'.format(mape))
+    
+    # Plot figure
+    y_values[['Actual', 'Predicted']].plot(figsize=(5.5,3.5))
+    plt.ylabel('Load')
+    plt.grid(axis='y')
+    plt.tight_layout()
+    plt.show()
+    date_start = date_start + dt.timedelta(hours=1)
 
 
 # In[ ]:
