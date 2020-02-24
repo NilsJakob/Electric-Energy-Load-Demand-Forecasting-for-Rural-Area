@@ -355,7 +355,7 @@ WAIT = 50  # patience
 LR = 1e-3  # learning rate
 # Feed-forward and fixed funnel-shaped deep ANN
 # tf.keras functional API
-input_layer = keras.layers.Input(shape=X_train_.shape[1:])
+input_layer = keras.layers.Input(shape=X_train_sc.shape[1:])
 x = keras.layers.Dense(units=1024, activation='relu')(input_layer)
 x = keras.layers.Dropout(0.2)(x)  # regularization
 x = keras.layers.Dense(units=512, activation='relu')(x)
