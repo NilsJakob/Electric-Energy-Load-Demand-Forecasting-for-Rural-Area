@@ -32,12 +32,14 @@ from tensorflow import keras
 
 # function to read load data 
 def data_reader(file_name):
-    data = pd.read_excel(file_name, parse_dates=True, index_col='Time', usecols=range(2))
+    data = pd.read_excel(file_name, parse_dates=True, 
+                         index_col='Time', usecols=range(2))
     return data
 
 # function to read weather data
 def weather_reader(file_name):
-    weather = pd.read_excel(file_name, parse_dates=True, index_col='Time measured')
+    weather = pd.read_excel(file_name, parse_dates=True, 
+                            index_col='Time measured')
     return weather
 
 # function for concatenating load data and weather data for training
@@ -58,7 +60,8 @@ weather_data = weather_data.interpolate()
 dataframe = concat_data(load_data, weather_data)
 
 # Renaming columns for easier interpreting:
-dataframe = dataframe.rename(columns={"Total":"Load","Middeltemperatur i 2m høyde (TM)": "Temperature"})
+dataframe = dataframe.rename(columns={"Total":"Load",
+                                      "Middeltemperatur i 2m høyde (TM)": "Temperature"})
 
 
 # In[ ]:
@@ -74,15 +77,20 @@ def show_plots(data, time_start, time_end=None):
     # Ploting time-series data with different time ranges
     fig, ax = plt.subplots(figsize=(7,4.5))
     ax2 = ax.twinx()
-    data['Load'].loc[time_start:time_end].plot(c='seagreen', label='Load', ax=ax)
+    data['Load'].loc[time_start:time_end].plot(
+        c='seagreen', label='Load', ax=ax)
     if time_end is None:
-        data['Temperature'].loc[time_start].plot(c='darkorange', label='Temperature', ax=ax2)
+        data['Temperature'].loc[time_start].plot(
+            c='darkorange', label='Temperature', ax=ax2)
     else:
-        data['Temperature'].loc[time_start:time_end].plot(c='darkorange', label='Temperature', ax=ax2)
+        data['Temperature'].loc[time_start:time_end].plot(
+            c='darkorange', label='Temperature', ax=ax2)
     ax.legend(loc='upper left')
     ax2.legend(loc='upper right')
-    ax.set_ylabel('Load', fontsize=12, fontweight='bold', color='seagreen')
-    ax2.set_ylabel('Temperature', fontsize=12, fontweight='bold', color='darkorange')
+    ax.set_ylabel('Load', fontsize=12, fontweight='bold', 
+                  color='seagreen')
+    ax2.set_ylabel('Temperature', fontsize=12, 
+                   fontweight='bold', color='darkorange')
     fig.tight_layout()
     plt.show()
     return
@@ -504,6 +512,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
 # Plotting multi-step ahead predictions using the walk-forward method
 if TEST_SIZE == 1: 
     raise ValueError('TEST_SIZE: Need a multi-step ahead predictions!')
+    
 date_start = pd.to_datetime(START_DATE) + dt.timedelta(days=WINDOW_SIZE_DAYS)
 for i in range(TEST_SIZE):
     date_end = date_start + dt.timedelta(hours=23)
@@ -513,9 +522,11 @@ for i in range(TEST_SIZE):
     y_values['Predicted'] = y_pred[i,:]
     
     # Absolute percentage error
-    y_values['APE'] = np.abs((y_values['Actual'] - y_values['Predicted'])/y_values['Actual'])*100.
+    y_values['APE'] = np.abs((y_values['Actual'] 
+                              - y_values['Predicted'])/y_values['Actual'])*100.
     # Mean absolute percentage error
-    mape = mean_absolute_percentage_error(y_values['Actual'].values, y_values['Predicted'].values)
+    mape = mean_absolute_percentage_error(y_values['Actual'].values, 
+                                          y_values['Predicted'].values)
     print('MAPE = {:.2f} (%)'.format(mape))
     
     # Plot figure
@@ -712,10 +723,13 @@ BUFFER_SIZE = 10000    # buffer size for shuffling batches using tf.data.Dataset
 # Convert arrays using tf.data.Dataset
 # Training dataset
 train_data = tf.data.Dataset.from_tensor_slices((X_train, y_train))
-train_data = train_data.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).repeat()
+# Cache data, shuffle using a buffer, create batches while droping 
+# a remainder of the data and finally repeat indefinitely as needed
+# by the steps_per_epoch parameter for the number of epochs specified.
+train_data = train_data.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True).repeat()
 # Validation dataset
 test_data = tf.data.Dataset.from_tensor_slices((X_test, y_test))
-test_data = test_data.batch(BATCH_SIZE).repeat()
+test_data = test_data.batch(BATCH_SIZE, drop_remainder=True).repeat()
 
 
 # #### Convolutional (LSTM) deep ANN using functional `tf.keras` API
@@ -748,8 +762,8 @@ loss = history.history['loss']
 val_loss = history.history['val_loss']
 print('MAE val_loss at final epoch is {:.2f}, while min. val_loss is {:.2f}.'
       .format(val_loss[-1], min(val_loss)))
-plt.plot(loss[2:], label='train')
-plt.plot(val_loss[2:], label='validation')
+plt.plot(loss, label='training')
+plt.plot(val_loss, label='validation')
 plt.legend(loc='best')
 plt.xlabel('Epochs')
 plt.ylabel('MAE loss value')
