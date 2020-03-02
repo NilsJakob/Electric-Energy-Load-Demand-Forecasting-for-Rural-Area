@@ -89,12 +89,14 @@ def show_plots(data, time_start, time_end=None):
     # Ploting time-series data with different time ranges
     fig, ax = plt.subplots(figsize=(7,4.5))
     ax2 = ax.twinx()
-    data['Load'].loc[time_start:time_end].plot(
-        c='seagreen', label='Load', ax=ax)
     if time_end is None:
+        data['Load'].loc[time_start].plot(
+            c='seagreen', label='Load', ax=ax)
         data['Temperature'].loc[time_start].plot(
             c='darkorange', label='Temperature', ax=ax2)
     else:
+        data['Load'].loc[time_start:time_end].plot(
+            c='seagreen', label='Load', ax=ax)
         data['Temperature'].loc[time_start:time_end].plot(
             c='darkorange', label='Temperature', ax=ax2)
     ax.legend(loc='upper left')
