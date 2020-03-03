@@ -435,7 +435,12 @@ plt.show()
 # In[ ]:
 
 
-hist = model.evaluate(X_test_sc, y_test)
+# Save a trained model (architecture and weights) on disk.
+# This model can be loaded and used without re-training:
+# model = keras.models.load_model('model-dense-dnn.tf')
+# for making predictions, or it can be restored and tra-
+# ining of the model can be continued from where it was.
+model.save('model-dense-dnn.tf')
 
 
 # In[ ]:
@@ -794,7 +799,12 @@ plt.show()
 # In[ ]:
 
 
-hist = model.evaluate(test_data, steps=VAL_STEPS)
+# Save a trained model (architecture and weights) on disk.
+# This model can be loaded and used without re-training:
+# model = keras.models.load_model('model-dense-dnn.tf')
+# for making predictions, or it can be restored and tra-
+# ining of the model can be continued from where it was.
+model.save('model-lstm-dnn.tf')
 
 
 # In[ ]:
