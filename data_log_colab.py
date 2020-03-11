@@ -538,11 +538,11 @@ X_test_sc = scaler.transform(X_test)
 
 # Single-step ahead time-series regression
 # Randomized grid search with cross-validation
-parameters = [{'C':stats.uniform(loc=1e-4, scale=1e5),
+parameters = {'C':stats.uniform(loc=1e-4, scale=1e5),
               'epsilon':stats.uniform(loc=1., scale=1e4),
-              'gamma':['auto', 'scale']}]
+              'gamma':['auto', 'scale']}
 svr = RandomizedSearchCV(estimator=SVR(kernel='rbf'), 
-                         param_distributions=parameters, n_iter=5000, 
+                         param_distributions=parameters, n_iter=1000, 
                          cv=TimeSeriesSplit(n_splits=3), 
                          scoring='neg_mean_squared_error', 
                          refit=True, n_jobs=-1, verbose=1)
