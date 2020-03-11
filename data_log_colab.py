@@ -1161,9 +1161,3 @@ for X, y in test_data.take(4):
 
 
 
-
-# In[ ]:
-
-
-from sklearn.model_selection import cross_val_score
-
