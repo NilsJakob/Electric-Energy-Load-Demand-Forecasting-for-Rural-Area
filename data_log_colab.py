@@ -35,7 +35,7 @@ from scipy import stats
 
 # Run this cell only in the Google Colab
 # Tensorflow version 2.x
-get_ipython().run_line_magic('tensorflow_version', '2.x')
+#%tensorflow_version 2.x
 
 
 # In[ ]:
@@ -49,7 +49,7 @@ from tensorflow import keras
 
 
 # Run this cell ONLY in the Google Colab
-get_ipython().system(' pip install keras-tuner')
+#! pip install keras-tuner
 
 
 # In[ ]:
@@ -538,9 +538,9 @@ X_test_sc = scaler.transform(X_test)
 
 # Single-step ahead time-series regression
 # Randomized grid search with cross-validation
-parameters = [{'C':stats.uniform(loc=1e-4, scale=1e5),
+parameters = {'C':stats.uniform(loc=1e-4, scale=1e5),
               'epsilon':stats.uniform(loc=1., scale=1e4),
-              'gamma':['auto', 'scale']}]
+              'gamma':['auto', 'scale']}
 svr = RandomizedSearchCV(estimator=SVR(kernel='rbf'), 
                          param_distributions=parameters, n_iter=5000, 
                          cv=TimeSeriesSplit(n_splits=3), 
@@ -578,7 +578,7 @@ chain_svr.fit(X_train.values, y_train.values)
 parameters = [{'criterion':['mse', 'mae'],
               'max_depth':[1, 5, None],
               'max_features':['auto', 'log2', 0.5],
-              'max_leaf_nodes':[1, 2, None]}]
+              'max_leaf_nodes':[2, None]}]
 tree = GridSearchCV(estimator=DecisionTreeRegressor(), 
                           param_grid=parameters,
                           cv=TimeSeriesSplit(n_splits=3), 
