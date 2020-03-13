@@ -542,10 +542,11 @@ parameters = {'C':stats.uniform(loc=1e-4, scale=1e5),
               'epsilon':stats.uniform(loc=1., scale=1e4),
               'gamma':['auto', 'scale']}
 svr = RandomizedSearchCV(estimator=SVR(kernel='rbf'), 
-                         param_distributions=parameters, n_iter=5000, 
+                         param_distributions=parameters, n_iter=1000, 
                          cv=TimeSeriesSplit(n_splits=3), 
                          scoring='neg_mean_squared_error', 
                          refit=True, n_jobs=-1, verbose=1)
+# Fit on training data using single-step time lag target values
 svr.fit(X_train, y_train.values[:,0])  # do not use scaled data
 print(svr.best_params_)
 
@@ -555,15 +556,16 @@ print(svr.best_params_)
 
 # Using best hyper-parameters from the single-step ahead regression
 multi_svr = MultiOutputRegressor(estimator=SVR(kernel='rbf', **svr.best_params_), n_jobs=-1)
-multi_svr.fit(X_train, y_train)
+multi_svr.fit(X_train.values, y_train.values)
 
 
 # In[ ]:
 
 
 # A multi-step model that arranges regressions into a chain. Each model makes a prediction
-# in the order specified by the chain using all of the available features provided to the
-# model plus the predictions of models that are earlier in the chain. Base model is SVM!
+# in the order specified by the chain (i.e. order of columns in the target matrix) using
+# all of the available features provided to the model plus the predictions of models that
+# are earlier in the chain. Order of columns is arranged by time-lags. Base model is SVM!
 chain_svr = RegressorChain(base_estimator=SVR(kernel='rbf', **svr.best_params_))
 chain_svr.fit(X_train.values, y_train.values)
 
@@ -585,7 +587,6 @@ tree = GridSearchCV(estimator=DecisionTreeRegressor(),
                           scoring='neg_mean_squared_error', 
                           refit=True, n_jobs=-1, verbose=1)
 tree.fit(X_train, y_train)  # do not use scaled data
-print(tree.best_params_)
 
 
 # ## Feed-forward deep ANN using functional `tf.keras` API
@@ -832,7 +833,7 @@ for i in range(TEST_SIZE):
     models = ['ANN', 'SVR-Reg', 'SVR-Chn', 'Tree']
     y_values['Ensemble'] = np.average(y_values[models].values, 
                                       axis=1,  # by columns
-                                      weights=[0.3, 0.25, 0.4, 0.05])  # with weights
+                                      weights=[0.3, 0.35, 0.35, 0.])  # with weights
     
     # Absolute percentage errors
     y_values['APE-ANN'] = np.abs((y_values['Actual'] - y_values['ANN'])/y_values['Actual'])*100.
@@ -1159,10 +1160,4 @@ for X, y in test_data.take(4):
 
 
 
-
-
-# In[ ]:
-
-
-from sklearn.model_selection import cross_val_score
 
